@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 
 //css 로드
 import './bootstrap-grid.min.css';
@@ -18,21 +19,21 @@ export default function RootLayout({ children }) {
       <body>
         <header>
           <h1 className='logo'>
-            <a href=''>Minimal Portfolio Theme</a>
+            <Link href='/'>Minimal Portfolio Theme</Link>
           </h1>
           <nav>
             <ul>
               <li>
-                <a href='index.html'>Home</a>
+                <Link href='/'>Home</Link>
               </li>
               <li>
-                <a href='portfolio.html'>Portfolio</a>
+                <Link href='/portfolio'>Portfolio</Link>
               </li>
               <li>
-                <a href='about.html'>About</a>
+                <Link href='/about'>About</Link>
               </li>
               <li>
-                <a href='contact.html'>Contact</a>
+                <Link href='/contact'>Contact</Link>
               </li>
             </ul>
           </nav>
