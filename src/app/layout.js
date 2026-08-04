@@ -1,5 +1,12 @@
 import Image from 'next/image';
 
+//css 로드
+import './bootstrap-grid.min.css';
+import './reset.css';
+import './common.css';
+import './default.css';
+import './responsive.css';
+
 export const metadata = {
   title: 'Minimal portfolio',
   description: 'The Most Fantastic and Flawless Portfolio in the World',
