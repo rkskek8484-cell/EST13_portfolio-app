@@ -2,7 +2,7 @@ import Image from 'next/image';
 
 export default function Home({ data }) {
   return (
-    <>
+    <div className='latest_portfolio'>
       <div className='row intro'>
         <div className='col-md-4'>
           <div className='contents shadow'>
@@ -28,7 +28,7 @@ export default function Home({ data }) {
               <div className='hover_contents'>
                 <div className='list_info'>
                   <h3>
-                    <a href=''>{item.title}</a>
+                    <a href={`/portfolio/${item.id}`}>{item.title}</a>
                     <Image src='/images/portfolio_list_arrow.png' width={6} height={8} alt='list arrow' />
                   </h3>
                   <p>
@@ -45,6 +45,6 @@ export default function Home({ data }) {
           See my full portfolio
         </a>
       </p>
-    </>
+    </div>
   );
 }
