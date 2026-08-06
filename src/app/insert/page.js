@@ -46,6 +46,7 @@ export default function Insert() {
     } else {
       console.log('데이터 입력 성공');
       router.push('/');
+      router.refresh();
     }
     // 파일 업로드
     if (thumbnail) {
@@ -87,6 +88,7 @@ export default function Insert() {
       alert('로그인 실패', error.message);
     } else {
       alert('로그인 성공');
+      setUser(data.user);
       router.refresh();
     }
   };
