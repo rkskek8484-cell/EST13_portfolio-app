@@ -26,8 +26,8 @@ export default function Login() {
       alert('로그인 실패', error.message);
     } else {
       alert('로그인 성공');
-
       router.push('/');
+      router.refresh();
     }
   };
 
