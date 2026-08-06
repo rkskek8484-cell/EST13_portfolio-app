@@ -1,7 +1,7 @@
 'use client';
 
 import { createClient } from '../utils/supabase/client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Insert() {
@@ -22,6 +22,21 @@ export default function Insert() {
   });
 
   const [thumbnail, setThumbnail] = useState(null);
+  const [user, setUser] = useState(null);
+  const [authForm, setAuthform] = useState({
+    email: '',
+    password: '',
+  });
+
+  useEffect(() => {
+    //즉시 실행 함수
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    })();
+  }, [supabase.auth]);
 
   async function insertData(e) {
     e.preventDefault();
@@ -31,6 +46,10 @@ export default function Insert() {
     } else {
       console.log('데이터 입력 성공');
       router.push('/');
+    }
+    // 파일 업로드
+    if (thumbnail) {
+      await uploadThumbnail(thumbnail);
     }
   }
 
@@ -43,6 +62,17 @@ export default function Insert() {
   const handleFileChange = e => {
     setThumbnail(e.target.files[0]);
   };
+
+  async function uploadThumbnail(file) {
+    const { data, error } = await supabase.storage.from('portfolio').upload(`thumbnail/${file.name}`, file);
+    if (error) {
+      // Handle error
+      console.error('파일 업로드 실패', error);
+    } else {
+      // Handle success
+      console.log('파일 업로드 성공');
+    }
+  }
 
   return (
     <div className='about_content shadow'>
