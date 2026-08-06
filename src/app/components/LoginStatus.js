@@ -2,6 +2,7 @@
 import { createClient } from '../utils/supabase/client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginStatus() {
   const supabase = createClient();
@@ -26,13 +27,24 @@ export default function LoginStatus() {
     router.refresh();
   };
 
-  if (user) {
-    return (
-      <li>
-        <button className='btn btn-primary' onClick={handleLogout}>
-          로그아웃
-        </button>
-      </li>
-    );
-  }
+  return (
+    <>
+      {user ? (
+        <li>
+          <button className='btn btn-primary' onClick={handleLogout}>
+            로그아웃
+          </button>
+        </li>
+      ) : (
+        <>
+          <li>
+            <Link href='/login'>로그인</Link>
+          </li>
+          <li>
+            <Link href='/register'>회원가입</Link>
+          </li>
+        </>
+      )}
+    </>
+  );
 }

@@ -59,6 +59,7 @@ export default function Insert() {
 
     setFormData({ ...formData, [name]: value });
   };
+
   const handleAuthChange = e => {
     const { name, value } = e.target;
 
@@ -67,10 +68,14 @@ export default function Insert() {
 
   const handleFileChange = e => {
     setThumbnail(e.target.files[0]);
+    console.log(e.target.files[0]);
   };
 
   async function uploadThumbnail(file) {
-    const { data, error } = await supabase.storage.from('portfolio').upload(`thumbnail/${file.name}`, file);
+    const ext = file.name.split('.').pop();
+    const fileName = `${crypto.randomUUID()}.${ext}`;
+
+    const { data, error } = await supabase.storage.from('portfolio').upload(`thumbnail/${fileName}`, file);
     if (error) {
       // Handle error
       console.error('파일 업로드 실패', error);
@@ -95,33 +100,31 @@ export default function Insert() {
 
   if (!user) {
     return (
-      <>
-        <div className='about_content shadow'>
-          <h2>관리자 로그인</h2>
-          <div className='contact_form'>
-            <form onSubmit={handleLogin}>
-              <p className='field'>
-                <label htmlFor='email'>이메일</label>
-                <input type='email' id='email' name='email' placeholder='이메일' required onChange={handleAuthChange} />
-              </p>
-              <p className='field'>
-                <label htmlFor='password'>비밀번호</label>
-                <input
-                  type='password'
-                  id='password'
-                  name='password'
-                  placeholder='비밀번호'
-                  required
-                  onChange={handleAuthChange}
-                />
-              </p>
-              <p className='submit'>
-                <input type='submit' className='primary-btn' value='로그인' />
-              </p>
-            </form>
-          </div>
+      <div className='about_content shadow'>
+        <h2>관리자 로그인</h2>
+        <div className='contact_form'>
+          <form onSubmit={handleLogin}>
+            <p className='field'>
+              <label htmlFor='email'>이메일</label>
+              <input type='email' id='email' name='email' placeholder='이메일' required onChange={handleAuthChange} />
+            </p>
+            <p className='field'>
+              <label htmlFor='password'>비밀번호</label>
+              <input
+                type='password'
+                id='password'
+                name='password'
+                placeholder='비밀번호'
+                required
+                onChange={handleAuthChange}
+              />
+            </p>
+            <p className='submit'>
+              <input type='submit' className='primary-btn' value='로그인' />
+            </p>
+          </form>
         </div>
-      </>
+      </div>
     );
   }
 
