@@ -43,10 +43,10 @@ export default function Insert() {
     //파일 업로드 후 경로 저장
     let thumbnailPath = null;
     if (thumbnail) {
-      const thumbnailPath = await uploadThumbnail(thumbnail);
+      thumbnailPath = await uploadThumbnail(thumbnail);
       if (!thumbnailPath) {
         alert('파일 업로드 실패');
-        return; //파일 업로드가 실패하면 글 등록도 취소
+        return; //파일 업로드 실패시 글 등록 취소
       }
     }
 
