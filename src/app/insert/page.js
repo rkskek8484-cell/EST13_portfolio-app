@@ -1,31 +1,48 @@
 'use client';
 
 import { createClient } from '../utils/supabase/client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Insert() {
   const supabase = createClient();
   const router = useRouter();
 
-  const [formData, setFormData] = useState({
+  const INITIAL_PORTFOLIO = {
     title: '',
     content: '',
     url: '',
     review: '',
     reviewer: '',
-    rep1_img: '',
-    rep1_desc: '',
-    rep2_img: '',
-    rep2_desc: '',
-    thumbnail: '',
-  });
+  };
+
+  const createInitialImages = () => [
+    {
+      file: null,
+      decription: '',
+      displayOrder: 1,
+    },
+    {
+      file: null,
+      decription: '',
+      displayOrder: 2,
+    },
+  ];
+
+  const [portfolio, setPortfolio] = useState(INITIAL_PORTFOLIO); //portfolio 테이블에 들어갈거
+  const [portfolioImages, setPortfolioImages] = useState(createInitialImages); //portfolio_images 테이블에 들어갈거
 
   const [thumbnail, setThumbnail] = useState(null);
   const [user, setUser] = useState(null);
   const [authForm, setAuthform] = useState({
     email: '',
     password: '',
+  });
+
+  const fileRef = useRef({
+    image1: null,
+    image2: null,
+    thumbnail: null,
   });
 
   useEffect(() => {
@@ -60,19 +77,29 @@ export default function Insert() {
     }
   }
 
-  const handleChange = e => {
+  const handlePortfolioChange = e => {
     const { name, value } = e.target;
+    setPortfolio(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-    setFormData({ ...formData, [name]: value });
+  const handlePortfolioFileChange = index => e => {
+    const selectedFile = e.target.files?.[0] ?? null;
+    setPortfolioImages(prev => prev.map((image, idx) => (index === idx ? { ...image, file: selectedFile } : image)));
+  };
+  const handlePortfolioDescChange = index => e => {
+    const { value } = e.target;
+    setPortfolioImages(prev => prev.map((image, idx) => (index === idx ? { ...image, decription: value } : image)));
   };
 
   const handleAuthChange = e => {
     const { name, value } = e.target;
-
     setAuthform(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = e => {
+  const handleThumbnailFileChange = e => {
     setThumbnail(e.target.files[0]);
     console.log(e.target.files[0]);
   };
@@ -143,7 +170,14 @@ export default function Insert() {
         <form onSubmit={insertData}>
           <p className='field'>
             <label htmlFor='title'>프로젝트 이름:</label>
-            <input type='text' id='title' name='title' placeholder='프로젝트 이름' required onChange={handleChange} />
+            <input
+              type='text'
+              id='title'
+              name='title'
+              placeholder='프로젝트 이름'
+              required
+              onChange={handlePortfolioChange}
+            />
           </p>
           <p className='field'>
             <label htmlFor='content'>프로젝트 설명:</label>
@@ -154,12 +188,12 @@ export default function Insert() {
               rows='10'
               placeholder='프로젝트 설명'
               required
-              onChange={handleChange}
+              onChange={handlePortfolioChange}
             ></textarea>
           </p>
           <p className='field'>
             <label htmlFor='url'>프로젝트 주소:</label>
-            <input type='url' id='url' name='url' placeholder='프로젝트 주소' onChange={handleChange} />
+            <input type='url' id='url' name='url' placeholder='프로젝트 주소' onChange={handlePortfolioChange} />
           </p>
           <p className='field'>
             <label htmlFor='review'>프로젝트 후기:</label>
@@ -169,33 +203,39 @@ export default function Insert() {
               cols='30'
               rows='10'
               placeholder='프로젝트 후기'
-              onChange={handleChange}
+              onChange={handlePortfolioChange}
             ></textarea>
           </p>
           <p className='field'>
             <label htmlFor='reviewer'>후기 글쓴이:</label>
-            <input type='text' id='reviewer' name='reviewer' placeholder='후기 글쓴이' onChange={handleChange} />
+            <input
+              type='text'
+              id='reviewer'
+              name='reviewer'
+              placeholder='후기 글쓴이'
+              onChange={handlePortfolioChange}
+            />
           </p>
           <p className='field'>
             <label htmlFor='rep1_img'>대표 이미지 1:</label>
-            <input type='file' id='rep1_img' name='rep1_img' accept='image/*' />
+            <input type='file' id='rep1_img' name='rep1_img' accept='image/*' onChange={handlePortfolioFileChange(0)} />
           </p>
           <p className='field'>
             <label htmlFor='rep1_desc'>대표 이미지 1 설명:</label>
-            <input type='text' id='rep1_desc' name='rep1_desc' onChange={handleChange} />
+            <input type='text' id='rep1_desc' name='rep1_desc' onChange={handlePortfolioDescChange(0)} />
           </p>
           <p className='field'>
             <label htmlFor='rep2_img'>대표 이미지 2:</label>
-            <input type='file' id='rep2_img' name='rep2_img' accept='image/*' />
+            <input type='file' id='rep2_img' name='rep2_img' accept='image/*' onChange={handlePortfolioFileChange(1)} />
           </p>
           <p className='field'>
             <label htmlFor='rep2_desc'>대표 이미지 2 설명:</label>
-            <input type='text' id='rep2_desc' name='rep2_desc' onChange={handleChange} />
+            <input type='text' id='rep2_desc' name='rep2_desc' onChange={handlePortfolioDescChange(1)} />
           </p>
 
           <p className='field'>
             <label htmlFor='thumbnail'>썸네일:</label>
-            <input type='file' id='thumbnail' name='thumbnail' accept='image/*' onChange={handleFileChange} />
+            <input type='file' id='thumbnail' name='thumbnail' accept='image/*' onChange={handleThumbnailFileChange} />
           </p>
 
           <p className='submit'>
