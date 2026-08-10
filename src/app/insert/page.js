@@ -19,12 +19,12 @@ export default function Insert() {
   const createInitialImages = () => [
     {
       file: null,
-      decription: '',
+      description: '',
       displayOrder: 1,
     },
     {
       file: null,
-      decription: '',
+      description: '',
       displayOrder: 2,
     },
   ];
@@ -55,26 +55,90 @@ export default function Insert() {
     })();
   }, [supabase.auth]);
 
+  // 초기화 함수
+  const resetForm = () => {
+    setPortfolio(INITIAL_PORTFOLIO);
+    setPortfolioImages(createInitialImages());
+    setThumbnail(null);
+
+    Object.values(fileRef.current).forEach(el => {
+      if (el) {
+        el.value = '';
+      }
+    });
+  };
+
   async function insertData(e) {
     e.preventDefault();
+
+    //1. 썸네일 업로드
     //파일 업로드 후 경로 저장
     let thumbnailPath = null;
     if (thumbnail) {
-      thumbnailPath = await uploadThumbnail(thumbnail);
+      thumbnailPath = await uploadFile(thumbnail, 'thumbnail');
       if (!thumbnailPath) {
         alert('파일 업로드 실패');
         return; //파일 업로드 실패시 글 등록 취소
       }
     }
 
-    const { error } = await supabase.from('portfolio').insert({ ...formData, thumbnail: thumbnailPath });
+    //2. portfolio 테이블 저장
+    const { data: insertedPortfoliio, error } = await supabase
+      .from('portfolio')
+      .insert({ ...portfolio, thumbnail: thumbnailPath }) //글 등록
+      .select('id') //등록한 id 조회
+      .single();
+
     if (error) {
       console.log(error);
+      await supabase.storage.from('portfolio').remove([thumbnailPath]);
+      alert(`대표 이미지 입력 실패:${error.message}`);
     } else {
-      console.log('데이터 입력 성공');
-      router.push('/');
-      router.refresh();
+      // console.log('데이터 입력 성공');
+      // router.push('/');
+      // router.refresh();
     }
+    const portfolioId = insertedPortfoliio.id; // 새 글의 id 할당
+    const imageRows = [];
+    const uploadedImagePaths = [];
+
+    //3. 대표 이미지 업로드
+    for (let image of portfolioImages) {
+      if (!image.file) {
+        continue; // 첫번쨰 값이 없으면 다음 회차에서 계속 해
+      }
+      //파일 업로드
+      const imageResult = await uploadFile(image.file, 'portfolio_images');
+      uploadedImagePaths.push(imageResult); // 대표 이미지 파일의 경로 할당
+      imageRows.push({
+        portfolio_id: portfolioId,
+        image_url: imageResult,
+        description: image.description,
+        display_order: image.displayOrder,
+      });
+    }
+
+    //4. portfolio_images 테이블 저장
+    if (imageRows.length > 0) {
+      const { error } = await supabase.from('portfolio_images').insert(imageRows);
+      if (error) {
+        console.error('대표 이미지 등록 실패', error);
+        //버켓에 저장된 대표 이미지 삭제
+        if (uploadedImagePaths.length) {
+          await supabase.storage.from('portfolio').remove(uploadedImagePaths);
+        }
+        //portfolio 테이블에서 글 삭제
+        await supabase.from('portfolio').delete().eq('id', portfolioId);
+
+        //thumbnail 파일 삭제
+        await supabase.storage.from('portfolio').remove([thumbnailPath]);
+        alert(`대표 이미지 입력 실패:${error.message}`);
+      }
+    }
+
+    //글 등록 성공 시 - 모든 입력값 초기화
+    alert('글 등록 성공');
+    resetForm();
   }
 
   const handlePortfolioChange = e => {
@@ -91,7 +155,7 @@ export default function Insert() {
   };
   const handlePortfolioDescChange = index => e => {
     const { value } = e.target;
-    setPortfolioImages(prev => prev.map((image, idx) => (index === idx ? { ...image, decription: value } : image)));
+    setPortfolioImages(prev => prev.map((image, idx) => (index === idx ? { ...image, description: value } : image)));
   };
 
   const handleAuthChange = e => {
@@ -104,9 +168,9 @@ export default function Insert() {
     console.log(e.target.files[0]);
   };
 
-  async function uploadThumbnail(file) {
+  async function uploadFile(file, folder) {
     const ext = file.name.split('.').pop();
-    const filePath = `thumbnail/${crypto.randomUUID()}.${ext}`;
+    const filePath = `${folder}/${crypto.randomUUID()}.${ext}`;
 
     const { data, error } = await supabase.storage.from('portfolio').upload(filePath, file);
     if (error) {
@@ -134,27 +198,36 @@ export default function Insert() {
 
   if (!user) {
     return (
-      <div className='about_content shadow'>
+      <div className="about_content shadow">
         <h2>관리자 로그인</h2>
-        <div className='contact_form'>
+        <div className="contact_form">
           <form onSubmit={handleLogin}>
-            <p className='field'>
-              <label htmlFor='email'>이메일</label>
-              <input type='email' id='email' name='email' placeholder='이메일' required onChange={handleAuthChange} />
-            </p>
-            <p className='field'>
-              <label htmlFor='password'>비밀번호</label>
+            <p className="field">
+              <label htmlFor="email">이메일</label>
               <input
-                type='password'
-                id='password'
-                name='password'
-                placeholder='비밀번호'
+                type="email"
+                id="email"
+                value={authForm.email}
+                name="email"
+                placeholder="이메일"
                 required
                 onChange={handleAuthChange}
               />
             </p>
-            <p className='submit'>
-              <input type='submit' className='primary-btn' value='로그인' />
+            <p className="field">
+              <label htmlFor="password">비밀번호</label>
+              <input
+                type="password"
+                id="password"
+                value={authForm.password}
+                name="password"
+                placeholder="비밀번호"
+                required
+                onChange={handleAuthChange}
+              />
+            </p>
+            <p className="submit">
+              <input type="submit" className="primary-btn" value="로그인" />
             </p>
           </form>
         </div>
@@ -163,83 +236,133 @@ export default function Insert() {
   }
 
   return (
-    <div className='about_content shadow'>
-      <h2 className='mb-3'>데이터 입력</h2>
+    <div className="about_content shadow">
+      <h2 className="mb-3">데이터 입력</h2>
 
-      <div className='contact_form'>
+      <div className="contact_form">
         <form onSubmit={insertData}>
-          <p className='field'>
-            <label htmlFor='title'>프로젝트 이름:</label>
+          <p className="field">
+            <label htmlFor="title">프로젝트 이름:</label>
             <input
-              type='text'
-              id='title'
-              name='title'
-              placeholder='프로젝트 이름'
+              type="text"
+              id="title"
+              name="title"
+              placeholder="프로젝트 이름"
+              value={portfolio.title}
               required
               onChange={handlePortfolioChange}
             />
           </p>
-          <p className='field'>
-            <label htmlFor='content'>프로젝트 설명:</label>
+          <p className="field">
+            <label htmlFor="content">프로젝트 설명:</label>
             <textarea
-              name='content'
-              id='content'
-              cols='30'
-              rows='10'
-              placeholder='프로젝트 설명'
+              name="content"
+              id="content"
+              value={portfolio.content}
+              cols="30"
+              rows="10"
+              placeholder="프로젝트 설명"
               required
               onChange={handlePortfolioChange}
             ></textarea>
           </p>
-          <p className='field'>
-            <label htmlFor='url'>프로젝트 주소:</label>
-            <input type='url' id='url' name='url' placeholder='프로젝트 주소' onChange={handlePortfolioChange} />
-          </p>
-          <p className='field'>
-            <label htmlFor='review'>프로젝트 후기:</label>
-            <textarea
-              name='review'
-              id='review'
-              cols='30'
-              rows='10'
-              placeholder='프로젝트 후기'
-              onChange={handlePortfolioChange}
-            ></textarea>
-          </p>
-          <p className='field'>
-            <label htmlFor='reviewer'>후기 글쓴이:</label>
+          <p className="field">
+            <label htmlFor="url">프로젝트 주소:</label>
             <input
-              type='text'
-              id='reviewer'
-              name='reviewer'
-              placeholder='후기 글쓴이'
+              type="url"
+              id="url"
+              value={portfolio.url}
+              name="url"
+              placeholder="프로젝트 주소"
               onChange={handlePortfolioChange}
             />
           </p>
-          <p className='field'>
-            <label htmlFor='rep1_img'>대표 이미지 1:</label>
-            <input type='file' id='rep1_img' name='rep1_img' accept='image/*' onChange={handlePortfolioFileChange(0)} />
+          <p className="field">
+            <label htmlFor="review">프로젝트 후기:</label>
+            <textarea
+              name="review"
+              id="review"
+              value={portfolio.review}
+              cols="30"
+              rows="10"
+              placeholder="프로젝트 후기"
+              onChange={handlePortfolioChange}
+            ></textarea>
           </p>
-          <p className='field'>
-            <label htmlFor='rep1_desc'>대표 이미지 1 설명:</label>
-            <input type='text' id='rep1_desc' name='rep1_desc' onChange={handlePortfolioDescChange(0)} />
+          <p className="field">
+            <label htmlFor="reviewer">후기 글쓴이:</label>
+            <input
+              type="text"
+              id="reviewer"
+              value={portfolio.reviewer}
+              name="reviewer"
+              placeholder="후기 글쓴이"
+              onChange={handlePortfolioChange}
+            />
           </p>
-          <p className='field'>
-            <label htmlFor='rep2_img'>대표 이미지 2:</label>
-            <input type='file' id='rep2_img' name='rep2_img' accept='image/*' onChange={handlePortfolioFileChange(1)} />
+          <p className="field">
+            <label htmlFor="rep1_img">대표 이미지 1:</label>
+            <input
+              type="file"
+              id="rep1_img"
+              name="rep1_img"
+              accept="image/*"
+              ref={element => {
+                fileRef.current.image1 = element;
+              }}
+              onChange={handlePortfolioFileChange(0)}
+            />
           </p>
-          <p className='field'>
-            <label htmlFor='rep2_desc'>대표 이미지 2 설명:</label>
-            <input type='text' id='rep2_desc' name='rep2_desc' onChange={handlePortfolioDescChange(1)} />
+          <p className="field">
+            <label htmlFor="rep1_desc">대표 이미지 1 설명:</label>
+            <input
+              type="text"
+              id="rep1_desc"
+              name="rep1_desc"
+              value={portfolioImages[0].description}
+              onChange={handlePortfolioDescChange(0)}
+            />
+          </p>
+          <p className="field">
+            <label htmlFor="rep2_img">대표 이미지 2:</label>
+            <input
+              type="file"
+              id="rep2_img"
+              name="rep2_img"
+              accept="image/*"
+              ref={element => {
+                fileRef.current.image2 = element;
+              }}
+              onChange={handlePortfolioFileChange(1)}
+            />
+          </p>
+          <p className="field">
+            <label htmlFor="rep2_desc">대표 이미지 2 설명:</label>
+            <input
+              type="text"
+              id="rep2_desc"
+              name="rep2_desc"
+              value={portfolioImages[1].description}
+              onChange={handlePortfolioDescChange(1)}
+            />
           </p>
 
-          <p className='field'>
-            <label htmlFor='thumbnail'>썸네일:</label>
-            <input type='file' id='thumbnail' name='thumbnail' accept='image/*' onChange={handleThumbnailFileChange} />
+          <p className="field">
+            <label htmlFor="thumbnail">썸네일:</label>
+            <input
+              type="file"
+              id="thumbnail"
+              name="thumbnail"
+              accept="image/*"
+              ref={element => {
+                fileRef.current.thumbnail = element;
+              }}
+              onChange={handleThumbnailFileChange}
+            />
           </p>
 
-          <p className='submit'>
-            <input type='submit' className='primary-btn' value='등록' />
+          <p className="submit">
+            <input type="submit" className="primary-btn" value="등록" />
           </p>
         </form>
       </div>
