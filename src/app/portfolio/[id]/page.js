@@ -1,64 +1,98 @@
 import { createClient } from '@/app/utils/supabase/client';
+import Image from 'next/image';
 
 export default async function Portfolio({ params }) {
   const supabase = createClient();
   const { id } = await params;
 
-  const { data, error } = await supabase.from('portfolio').select().eq('id', id).single();
+  const { data: current, error } = await supabase
+    .from('portfolio')
+    .select(
+      `*,
+      portfolio_images(
+      id,
+      image_url,
+      description,
+      display_order
+      )
+    `,
+    )
+    .eq('id', id)
+    .order('display_order', { referencedTable: 'portfolio_images', ascending: true })
+    .single();
 
-  //이전 글 id, title 조회
+  //이전글 id, title 조회
   const { data: prev } = await supabase
     .from('portfolio')
-    .select('id, title')
+    .select('id,title')
     .lt('id', id)
     .order('id', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  //다음 글 id, title 조회
+  //다음글 id, title 조회
   const { data: next } = await supabase
     .from('portfolio')
-    .select('id, title')
+    .select('id,title')
     .gt('id', id)
     .order('id', { ascending: true })
     .limit(1)
     .maybeSingle();
 
-  console.log(data);
+  // console.log("prev" + prev);
+  // console.log("next" + next);
+  // console.log(current);
+
+  const getPublicURL = path => {
+    if (!path) return '';
+    const { data: publicUrlData } = supabase.storage.from('portfolio').getPublicUrl(path);
+    return publicUrlData.publicUrl;
+  };
+
+  const portfolioImages = current.portfolio_images ?? [];
 
   return (
-    <div className='portoflio-single'>
-      <div className='row'>
-        <div className='col-md-8 decription'>
-          <div className='contents shadow'>
-            {/* <img src="images/portfolio_single_img1.jpg" alt="img1"> */}
-            <p>{data?.rep1_desc ?? ''}</p>
-          </div>
-          <div className='contents shadow'>
-            {/* <img src="images/portfolio_single_img2.jpg" alt="img2"> */}
-            <p>{data?.rep2_desc ?? ''}</p>
-          </div>
+    <div className="portoflio-single">
+      <div className="row">
+        <div className="col-md-8 decription">
+          {portfolioImages.length > 0 ? (
+            portfolioImages.map((image, idx) => (
+              <div key={idx} className="contents shadow">
+                <Image
+                  src={getPublicURL(image.image_url)}
+                  alt={image.description}
+                  width={762}
+                  height={504}
+                  style={{ width: '100%', height: 'auto' }}
+                  loading="eager"
+                />
+                <p>{image.description}</p>
+              </div>
+            ))
+          ) : (
+            <div className="contents shadow">대표 이미지가 없습니다.</div>
+          )}
         </div>
-        <div className='col-md-4 portfolio_info'>
-          <div className='contents shadow'>
-            <h2>{data?.title ?? 'Project Title'}</h2>
-            <div>{data?.content ?? ''}</div>
-            <p className='link'>
-              <a href={data?.url ?? ''}>Visit site &rarr;</a>
+        <div className="col-md-4 portfolio_info">
+          <div className="contents shadow">
+            <h2>{current?.title ?? 'Project Title'}</h2>
+            <div>{current?.content ?? ''}</div>
+            <p className="link">
+              <a href={current?.url ?? ''}>Visit site &rarr;</a>
             </p>
-            <hr className='double' />
+            <hr className="double" />
             <blockquote>
-              <p>“{data?.review ?? ''}”</p>
-              <small>- {data?.reviewer ?? ''} -</small>
+              <p>{current?.review ?? ''}</p>
+              <small>- {current?.reviewer ?? ''} -</small>
             </blockquote>
-            <p className='nav'>
+            <p className="nav">
               {prev && (
-                <a href={`/portfolio/${prev.id}`} className='secondary-btn'>
+                <a href={`/portfolio/${prev.id}`} className="secondary-btn">
                   &larr; {prev.title}
                 </a>
               )}
               {next && (
-                <a href={`/portfolio/${next.id}`} className='secondary-btn'>
+                <a href={`/portfolio/${next.id}`} className="secondary-btn">
                   {next.title} &rarr;
                 </a>
               )}
