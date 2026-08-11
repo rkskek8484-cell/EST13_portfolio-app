@@ -2,7 +2,10 @@ import Image from 'next/image';
 import { createClient } from '../utils/supabase/client';
 import Link from 'next/link';
 
-export default async function Portfolio() {
+export default async function Portfolio({ searchParams }) {
+  const params = await searchParams;
+  const page = Number(params.page ?? 1);
+
   const supabase = createClient();
   //페이지네이션 설정
   const PAGE_SIZE = 6;
@@ -21,11 +24,11 @@ export default async function Portfolio() {
   }
   console.log(pageCountArray);
 
-  const { data, error } = await supabase
-    .from('portfolio')
-    .select()
-    .order('created_at', { ascending: false })
-    .range(0, 5);
+  //3. 링크 클릭 시
+  const from = (page - 1) * PAGE_SIZE; //page1 from 0
+  const to = from + PAGE_SIZE - 1; //page1 to 5
+
+  const { data, error } = await supabase.from('portfolio').select().order('id', { ascending: false }).range(from, to);
 
   if (error) {
     console.error('연결실패', error);
