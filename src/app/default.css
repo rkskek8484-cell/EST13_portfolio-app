@@ -177,6 +177,11 @@ footer .copyright p a {
 .portfolio_links li {
   margin: 0 8px;
 }
+.pagenation {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
 .portfolio_links li a.active,
 .pagenation a.active {
   background: none;

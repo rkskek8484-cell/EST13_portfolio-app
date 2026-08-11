@@ -9,6 +9,7 @@ export default async function Portfolio({ searchParams }) {
   const supabase = createClient();
   //페이지네이션 설정
   const PAGE_SIZE = 6;
+  const PAGEGP_SIZE = 5;
 
   //1. portfolio 테이블 데이터 총 개수
   const { count, error: countError } = await supabase.from('portfolio').select('*', { count: 'exact', head: true });
@@ -16,17 +17,34 @@ export default async function Portfolio({ searchParams }) {
   if (countError) {
     return <p>{countError.message}</p>;
   }
-  // 2. 하단 페이지네이션 링크 생성
+  // // 2. 하단 페이지네이션 링크 생성
   const pageCount = Math.ceil(count / PAGE_SIZE);
-  const pageCountArray = [];
-  for (let i = 1; i < pageCount; i++) {
-    pageCountArray.push(i);
-  }
-  console.log(pageCountArray);
+  // const pageCountArray = [];
+  // for (let i = 1; i < pageCount; i++) {
+  //   pageCountArray.push(i);
+  // }
+  // console.log(pageCountArray);
 
   //3. 링크 클릭 시
-  const from = (page - 1) * PAGE_SIZE; //page1 from 0
+  const safePage = Math.min(page, pageCount); //
+  const from = (safePage - 1) * PAGE_SIZE; //page1 from 0
   const to = from + PAGE_SIZE - 1; //page1 to 5
+  console.log(from, to);
+
+  //4. 페이지 그룹 계산
+  const pageGP = Math.ceil(safePage / PAGEGP_SIZE); //safePage 1 =1
+  const pageGPCount = Math.ceil(pageCount / PAGEGP_SIZE); // 8/5 1.6=>2
+
+  const groupStart = (pageGP - 1) * PAGEGP_SIZE + 1; //page 1~5 = 1
+  const groupEnd = Math.min(groupStart + (PAGEGP_SIZE - 1), pageCount); // groupStart 1 = 5
+
+  const pageCountArray = [];
+  for (let i = groupStart; i < groupEnd; i++) {
+    pageCountArray.push(i);
+  }
+
+  const prevGP = groupStart - PAGEGP_SIZE;
+  const nextGP = groupEnd + 1;
 
   const { data, error } = await supabase.from('portfolio').select().order('id', { ascending: false }).range(from, to);
 
@@ -77,11 +95,21 @@ export default async function Portfolio({ searchParams }) {
       </div>
       <div>
         <p className="pagenation shadow">
+          {pageGP > 1 && (
+            <Link href={`?page=${prevGP}`} className="secondary-btn">
+              이전
+            </Link>
+          )}
           {pageCountArray.map(i => (
-            <Link key={i} href={`?page=${i}`} className="secondary-btn active">
+            <Link key={i} href={`?page=${i}`} className={`secondary-btn ${safePage === i ? 'active' : ''}`}>
               {i}
             </Link>
           ))}
+          {groupEnd < pageCount && (
+            <Link href={`?page=${nextGP}`} className="secondary-btn">
+              다음
+            </Link>
+          )}
         </p>
       </div>
     </>
